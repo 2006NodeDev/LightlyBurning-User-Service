@@ -88,7 +88,7 @@ app.use((err, req, res, next) => {
     }
 })
 
-app.listen(2006, () => {
+app.listen(process.env['LB_HTTP_PORT'], () => {
     logger.info('Server has started');
 })
 
