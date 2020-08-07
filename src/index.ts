@@ -8,6 +8,8 @@ import './event-listeners/new-user'
 import jwt from 'jsonwebtoken'
 import { JWTVerifyMiddleware } from './middleware/jwt-verify-middleware'
 import { logger, errorLogger } from './utils/loggers'
+import { userServiceAuthorize } from './remote/auth0/user-service-authorize'
+import { auth0UserLogin } from './remote/auth0/auth0-user-login'
 
 // base path, something like /user-service
 const basePath = process.env['LB_BASE_PATH'] || ''//use / if there is no other base path provided
@@ -56,6 +58,8 @@ basePathRouter.post('/login', async (req:Request, res:Response, next:NextFunctio
         next( new BadCredentialsError())
     } else {
         try{
+
+            await auth0UserLogin(username,password)
             let user = await getUserByUsernameAndPassword(username, password)
             //instead of setting session, build and send back a jwt
             let token = jwt.sign(user, 'thisIsASecret', {expiresIn: '1h'})//THE SECRET should be in an env var
@@ -89,6 +93,7 @@ app.use((err, req, res, next) => {
 })
 
 app.listen(process.env['LB_HTTP_PORT'], () => {
+    userServiceAuthorize()
     logger.info('Server has started');
 })
 
