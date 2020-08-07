@@ -40,7 +40,6 @@ export async function getUserById(id: number):Promise<User> {
         //send the query
         let results = await client.query(`select u.user_id, 
                 u.username , 
-                u."password" , 
                 u.email ,
                 r.role_id , 
                 r."role",
@@ -70,22 +69,21 @@ export async function getUserById(id: number):Promise<User> {
 
 //find user by username and password ( login )
 
-export async function getUserByUsernameAndPassword(username:string, password:string):Promise<User>{
+export async function getUserByEmailAddress(email:string):Promise<User>{
     let client: PoolClient
     try {
         //get a connection
         client = await connectionPool.connect()
         //send the query
         let results = await client.query(`select u."user_id", 
-                u."username" , 
-                u."password" , 
+                u."username" ,  
                 u."email" ,
                 r."role_id" , 
                 r."role",
                 u."image" 
                 from ${schema}.users u left join ${schema}.roles r on u."role" = r.role_id 
-                where u."username" = $1 and u."password" = $2;`,
-            [username, password])// this is a parameterized query. In the query itself we use $1 to specify a parameter, then we fill in a value using an array as the second arg of the query function
+                where u."email" = $1;`,
+            [email])// this is a parameterized query. In the query itself we use $1 to specify a parameter, then we fill in a value using an array as the second arg of the query function
                 // pg library automatically sanitizes input for these params
         if(results.rowCount === 0){
             throw new Error('User Not Found')
@@ -118,9 +116,9 @@ export async function saveOneUser(newUser:User):Promise<User>{
             throw new Error('Role Not Found')
         }
         roleId = roleId.rows[0].role_id
-        let results = await client.query(`insert into ${schema}.users ("username", "password","email","role", "image")
+        let results = await client.query(`insert into ${schema}.users ("user_id","username", "email","role", "image")
                                             values($1,$2,$3,$4,$5) returning "user_id" `,//allows you to return some values from the rows in an insert, update or delete
-                                            [newUser.username, newUser.password, newUser.email, roleId, newUser.image])
+                                            [newUser.userId, newUser.username, newUser.email, roleId, newUser.image])
         newUser.userId = results.rows[0].user_id
         await client.query('COMMIT;')//ends transaction
         return newUser

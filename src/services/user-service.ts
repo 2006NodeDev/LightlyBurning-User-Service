@@ -4,6 +4,7 @@ import { saveProfilePicture } from "../daos/Cloud-Storage/user-images";
 import { bucketBaseUrl } from "../daos/Cloud-Storage";
 import { expressEventEmitter, customExpressEvents } from "../event-listeners";
 import { logger, errorLogger } from "../utils/loggers";
+import { auth0CreateNewUser } from "../remote/auth0/auth0-create-new-user";
 
 
 
@@ -21,27 +22,29 @@ export async function getUserByIDService(id: number): Promise<User> {
     return await getUserById(id)
 }
 
-export async function saveOneUserService(newUser: User): Promise<User> {
+export async function saveOneUserService(newUser: User, password: string): Promise<User> {
     //two major process to manage in this function
     try {
-        let base64Image = newUser.image
-        let [dataType, imageBase64Data] = base64Image.split(';base64,')// gets us the two important parts of the base 64 string
-         //we need to make sure picture is in the right format
-        let contentType = dataType.split('/').pop()// split our string that looks like data:image/ext into ['data:image' , 'ext]
-        //then the pop method gets us the last thing in the array
-        //we need to add the picture path to the user data in the sql database
+        //try to save user to auth0
+        let newUserId = await auth0CreateNewUser(newUser, password)
+        //update id
+        newUser.userId = newUserId
+
+        let base64Data, contentType;
+        //get potential image link
         if (newUser.image) {
+            [base64Data, contentType] = processImage(newUser.image)
             newUser.image = `${bucketBaseUrl}/users/${newUser.username}/profile.${contentType}`
         }
-        //we need to save new user data to the sql database
+        //save user to db
         let savedUser = await saveOneUser(newUser)
 
-        //we need to save a picture to cloud storage 
-       
-        //we should probably make sure that username has no spaces in it or that we replace them with -
-        await saveProfilePicture(contentType, imageBase64Data, `users/${newUser.username}/profile.${contentType}`)
-        //with event driven design after I completed the save a user process
-        //I send an event saying tis done with the relevent info
+        //save picture to cloud sql
+        if (base64Data) {
+            await saveProfilePicture(contentType, base64Data, `users/${newUser.username}/profile.${contentType}`)
+        }
+
+        //EMIT NEW USER CREATED EVENT
         expressEventEmitter.emit(customExpressEvents.NEW_USER, newUser)
         return savedUser
     } catch (e) {
@@ -53,8 +56,12 @@ export async function saveOneUserService(newUser: User): Promise<User> {
     //if we can't save the user in the db, don't save the picture
     //if we do save the user and the picture save fails - pretend that nothing happened ( you should probably update the user to set the image to null)
 
+}
 
-
+function processImage(image: string) {
+    let [dataType, imageBase64Data] = image.split(';base64,')
+    let contentType = dataType.split('/').pop()// split our string that looks like data:image/ext into ['data:image' , 'ext]
+    return [imageBase64Data, contentType]
 }
 
 

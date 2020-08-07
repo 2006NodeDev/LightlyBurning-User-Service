@@ -2,12 +2,14 @@ import express, { Request, Response, NextFunction } from 'express'
 import { loggingMiddleware } from './middleware/logging-middleware'
 import { userRouter } from './routers/user-router'
 import { BadCredentialsError } from './errors/BadCredentialsError'
-import { getUserByUsernameAndPassword } from './daos/SQL/user-dao'
+import { getUserByEmailAddress } from './daos/SQL/user-dao'
 import { corsFilter } from './middleware/cors-filter'
 import './event-listeners/new-user'
-import jwt from 'jsonwebtoken'
+
 import { JWTVerifyMiddleware } from './middleware/jwt-verify-middleware'
 import { logger, errorLogger } from './utils/loggers'
+import { auth0UserServiceGetToken } from './remote/auth0/auth0-user-service-get-token'
+import { auth0UserGetToken } from './remote/auth0/auth0-user-get-token'
 
 // base path, something like /user-service
 const basePath = process.env['LB_BASE_PATH'] || ''//use / if there is no other base path provided
@@ -48,7 +50,7 @@ app.get('/health', (req:Request,res:Response)=>{
 // an endpoint that unathenticated users can send credentials to to recieve authentication
 basePathRouter.post('/login', async (req:Request, res:Response, next:NextFunction)=>{
     // you could use destructuring, see ./routers/book-router
-    let username = req.body.username
+    let username = req.body.username//this is an email address
     let password = req.body.password
     // if I didn't get a usrname/password send an error and say give me both fields
     if(!username || !password){
@@ -56,9 +58,9 @@ basePathRouter.post('/login', async (req:Request, res:Response, next:NextFunctio
         next( new BadCredentialsError())
     } else {
         try{
-            let user = await getUserByUsernameAndPassword(username, password)
+            let user = await getUserByEmailAddress(username)
             //instead of setting session, build and send back a jwt
-            let token = jwt.sign(user, 'thisIsASecret', {expiresIn: '1h'})//THE SECRET should be in an env var
+            let token = await auth0UserGetToken(username, password)
             res.header('Authorization', `Bearer ${token}`)
             // so we can use that data in other requests
             res.json(user)
@@ -89,6 +91,7 @@ app.use((err, req, res, next) => {
 })
 
 app.listen(process.env['LB_HTTP_PORT'], () => {
+    auth0UserServiceGetToken()
     logger.info('Server has started');
 })
 

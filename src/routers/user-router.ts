@@ -8,6 +8,43 @@ import { saveOneUserService, getUserByIDService, getAllUsersService } from '../s
 // our base path is /users
 export const userRouter = express.Router()
 
+
+//save new
+userRouter.post('/',  async (req: Request, res: Response, next: NextFunction) => {
+    // get input from the user
+    let { username, password, email, role, image } = req.body//a little old fashioned destructuring
+    //verify that input
+    if (!username || !password || !role) {
+        next(new UserUserInputError)
+    } else {
+        //try  with a function call to the dao layer to try and save the user
+        let newUser: User = {
+            username,
+            role,
+            userId: '0',
+            email,
+            image,
+        }
+        newUser.email = email || null
+        try {
+            let savedUser = await saveOneUserService(newUser, password)
+            res.json(savedUser)// needs to have the updated userId
+        } catch (e) {
+            next(e)
+        }
+    }
+
+
+
+
+    //catch with next(e)
+
+
+})
+
+
+
+
 // this applies this middleware to the entire router beneath it
 userRouter.use(authenticationMiddleware)
 
@@ -46,39 +83,6 @@ userRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) =
     }
 })
 
-//save new
-userRouter.post('/',  async (req: Request, res: Response, next: NextFunction) => {
-    // get input from the user
-    let { username, password, email, role, image } = req.body//a little old fashioned destructuring
-    //verify that input
-    if (!username || !password || !role) {
-        next(new UserUserInputError)
-    } else {
-        //try  with a function call to the dao layer to try and save the user
-        let newUser: User = {
-            username,
-            password,
-            role,
-            userId: 0,
-            email,
-            image,
-        }
-        newUser.email = email || null
-        try {
-            let savedUser = await saveOneUserService(newUser)
-            res.json(savedUser)// needs to have the updated userId
-        } catch (e) {
-            next(e)
-        }
-    }
-
-
-
-
-    //catch with next(e)
-
-
-})
 
 
 

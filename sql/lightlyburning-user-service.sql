@@ -10,28 +10,24 @@ drop table roles;
 
 
 create table roles(
-	"role_id" serial primary key,
+	"role_id" text primary key,
 	"role" text
 );
 
 -- some tables have dependencies on others and we should make those others first
 create table users (
-	"user_id" serial primary key,
+	"user_id" text primary key,
 	"username" text not null unique,
-	"password" text not null,
-	"email" text,
-	"role" int references roles ("role_id"), --fk to a role table
+	"email" text unique,
+	"role" text references roles ("role_id"), --fk to a role table
 	"image" text
 );
 
 
 
-insert into roles ("role")
-	values ('Admin'),
-		   ('Manager'),
-		   ('User');
+insert into roles ("role_id", "role")
+	values ('rol_GPgBwh5xGfKCeO5V', 'Admin'),
+		   ('rol_H0U7poZ5OgwKHCsL', 'User');
 		  
-insert into users ("username", "password" ,"email", "role" )
-	values ('alec', 'password', 'alec@email.com', 1),
-		   ('reba', 'password', 'reba@email.com', 2),
-		   ('chrischale', 'password', 'chrischale@email.com', 3);
+insert into users 
+	values ('auth0|5f2db1f5257b000038e4aaaf', 'alec', '2006nodedev@gmail.com', 'rol_GPgBwh5xGfKCeO5V', null)
