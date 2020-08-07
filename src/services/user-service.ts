@@ -4,6 +4,7 @@ import { saveProfilePicture } from "../daos/Cloud-Storage/user-images";
 import { bucketBaseUrl } from "../daos/Cloud-Storage";
 import { expressEventEmitter, customExpressEvents } from "../event-listeners";
 import { logger, errorLogger } from "../utils/loggers";
+import { auth0CreateUser } from "../remote/auth0/auth0-create-user";
 
 
 
@@ -33,8 +34,12 @@ export async function saveOneUserService(newUser: User): Promise<User> {
         if (newUser.image) {
             newUser.image = `${bucketBaseUrl}/users/${newUser.username}/profile.${contentType}`
         }
+
+
+        let authUser = await auth0CreateUser(newUser)
+
         //we need to save new user data to the sql database
-        let savedUser = await saveOneUser(newUser)
+        let savedUser = await saveOneUser(authUser)
 
         //we need to save a picture to cloud storage 
        

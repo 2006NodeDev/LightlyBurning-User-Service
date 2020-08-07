@@ -118,9 +118,9 @@ export async function saveOneUser(newUser:User):Promise<User>{
             throw new Error('Role Not Found')
         }
         roleId = roleId.rows[0].role_id
-        let results = await client.query(`insert into ${schema}.users ("username", "password","email","role", "image")
-                                            values($1,$2,$3,$4,$5) returning "user_id" `,//allows you to return some values from the rows in an insert, update or delete
-                                            [newUser.username, newUser.password, newUser.email, roleId, newUser.image])
+        let results = await client.query(`insert into ${schema}.users ("user_id","username", "password","email","role", "image")
+                                            values($1,$2,$3,$4,$5,$6) returning "user_id" `,//allows you to return some values from the rows in an insert, update or delete
+                                            [newUser.userId, newUser.username, newUser.password, newUser.email, roleId, newUser.image])
         newUser.userId = results.rows[0].user_id
         await client.query('COMMIT;')//ends transaction
         return newUser

@@ -1,5 +1,5 @@
 export class UserDTO {
-    user_id:number
+    user_id:string
     username:string
     password:string
     email:string
